@@ -50,7 +50,7 @@ Token Token_stream::get()
 	std::cin >> ch;
 	switch (ch) {
 	case ';':	//input confirmation
-	case 'q':	//exit
+	case 'x':	//exit
 	case '(': case ')':
 	case '+': case '-': case '*': case '/':
 		return Token{ ch };
@@ -156,22 +156,19 @@ int main()
 	rand();
 	SetConsoleOutputCP(1251);
 	try {
-		std::cout << "Калькулятор." << std::endl
-			<< "Чтобы выйти, введите 'q'" << std::endl
-			<< "Вводите выражения(для подтверждения вводите ';'): " << std::endl;
-		double val = 0;
+		std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl
+			<< "Вводите выражения с числами с плавающей точкой. (для подтеверждения введите символ ';')" << std::endl
+			<< "Допустимые операторы: '+', '-', '*', '/'" << std::endl
+			<< "Чтобы выйти, введите 'x'" << std::endl;
 		while (std::cin) {
+			//std::cout << "> ";
 			Token t = ts.get();
-			if (t.kind == 'q')
+			while (t.kind == ';')
+				t = ts.get();
+			if (t.kind == 'x')
 				break;
-			if (t.kind == ';')
-			{
-				std::cout << "=" << val << std::endl;
-				val = 0;
-			}
-			else
-				ts.putback(t);
-			val += expression();
+			ts.putback(t);
+			std::cout << "= " << expression() << std::endl;
 		}
 	}
 	catch (std::exception& e) {
