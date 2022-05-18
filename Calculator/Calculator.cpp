@@ -1,3 +1,39 @@
+/*
+Программа выполняет функции калькулятора
+
+Грамматика программы: 
+
+Инструкция:
+	Выражение
+	Вывод
+	Выход
+
+Вывод:
+	;
+	
+Выход:
+	x
+	
+Выражение:
+	Терм
+	Выражение + Терм
+	Выражение - Терм
+	
+Терм:
+	Первичное
+	Терм * Первичное
+	Терм / Первичное
+	Терм % Первичное
+
+Первичное:
+	Число
+	( Выражение )
+	-Первичное
+	+Первичное
+
+Число:
+	Литерал с плавающей точкой
+*/
 #include <iostream>
 #include <string>
 #include <vector>
@@ -57,8 +93,13 @@ Token Token_stream::get()
 	switch (ch) {
 	case print:	//print confirmation
 	case quit:	//exit
-	case '(': case ')':
-	case '+': case '-': case '*': case '/': case '%':
+	case '(':
+	case ')':
+	case '+':
+	case '-':
+	case '*':
+	case '/':
+	case '%':
 		return Token{ ch };
 	case '.':
 	case '0': case '1': case '2': case '3': case '4':
@@ -169,26 +210,36 @@ double expression()
 	}
 }
 
+void start_message()
+{
+	std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl
+		<< "Вводите выражения с числами с плавающей точкой. (для подтеверждения введите символ " << print << ")" << std::endl
+		<< "Допустимые операторы: '+', '-', '*', '/'" << std::endl
+		<< "Чтобы выйти, введите " << quit << std::endl;
+}
+
+void calculate()
+{
+	while (std::cin) {
+		std::cout << prompt;
+		Token t = ts.get();
+		while (t.kind == print)
+			t = ts.get();
+		if (t.kind == quit)
+			break;
+		ts.putback(t);
+		std::cout << result << expression() << std::endl;
+	}
+}
+
 int main()
 {
 	srand(time(0));
 	rand();
 	SetConsoleOutputCP(1251);
 	try {
-		std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl
-			<< "Вводите выражения с числами с плавающей точкой. (для подтеверждения введите символ " << print << ")" << std::endl
-			<< "Допустимые операторы: '+', '-', '*', '/'" << std::endl
-			<< "Чтобы выйти, введите " << quit << std::endl;
-		while (std::cin) {
-			std::cout << prompt;
-			Token t = ts.get();
-			while (t.kind == print)
-				t = ts.get();
-			if (t.kind == quit)
-				break;
-			ts.putback(t);
-			std::cout << result << expression() << std::endl;
-		}
+		start_message();
+		calculate();
 	}
 	catch (std::exception& e) {
 		std::cerr << "ERROR : " << e.what() << std::endl;
