@@ -15,6 +15,12 @@ void error(std::string s)
 }
 
 
+const char print = ';';
+const char quit = 'x';
+const char number = '8';
+const std::string prompt = "> ";
+const std::string result = "= ";
+
 class Token
 {
 public:
@@ -49,10 +55,10 @@ Token Token_stream::get()
 	char ch;
 	std::cin >> ch;
 	switch (ch) {
-	case ';':	//input confirmation
-	case 'x':	//exit
+	case print:	//print confirmation
+	case quit:	//exit
 	case '(': case ')':
-	case '+': case '-': case '*': case '/':
+	case '+': case '-': case '*': case '/': case '%':
 		return Token{ ch };
 	case '.':
 	case '0': case '1': case '2': case '3': case '4':
@@ -60,7 +66,7 @@ Token Token_stream::get()
 		std::cin.putback(ch);
 		double val;
 		std::cin >> val;
-		return Token{ '8', val };
+		return Token{ number, val };
 	default:
 		error("invalid token");
 	}
@@ -85,8 +91,12 @@ double primary()
 		}
 		return d;
 	}
-	case '8':
+	case number:
 		return t.value;
+	case '-':
+		return -primary();
+	case '+':
+		return primary();
 	default:
 		error("required a number");
 	}
@@ -119,7 +129,16 @@ double term() {
 			t = ts.get();
 			break;
 		}
-		case '8':
+		case '%':
+		{
+			double d = primary();
+			if (d == 0)
+				error("division by zero");
+			left = fmod(left, d);
+			t = ts.get();
+			break;
+		}
+		case number:
 			error("excess number");
 		default:
 			ts.putback(t);
@@ -157,18 +176,18 @@ int main()
 	SetConsoleOutputCP(1251);
 	try {
 		std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl
-			<< "Вводите выражения с числами с плавающей точкой. (для подтеверждения введите символ ';')" << std::endl
+			<< "Вводите выражения с числами с плавающей точкой. (для подтеверждения введите символ " << print << ")" << std::endl
 			<< "Допустимые операторы: '+', '-', '*', '/'" << std::endl
-			<< "Чтобы выйти, введите 'x'" << std::endl;
+			<< "Чтобы выйти, введите " << quit << std::endl;
 		while (std::cin) {
-			//std::cout << "> ";
+			std::cout << prompt;
 			Token t = ts.get();
-			while (t.kind == ';')
+			while (t.kind == print)
 				t = ts.get();
-			if (t.kind == 'x')
+			if (t.kind == quit)
 				break;
 			ts.putback(t);
-			std::cout << "= " << expression() << std::endl;
+			std::cout << result << expression() << std::endl;
 		}
 	}
 	catch (std::exception& e) {
