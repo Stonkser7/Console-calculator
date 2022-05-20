@@ -12,10 +12,14 @@
 
 Инструкция:
 	Объявление
+	Присваивание
 	Выражение
 
 Объявление:
-	"let" Имя "=" Выражение
+	"let" Имя '=' Выражение
+
+Присваивание:
+	"assign" Имя '=' Выражение
 
 Вывод:
 	;
@@ -42,6 +46,9 @@
 
 Число:
 	Литерал с плавающей точкой
+
+Имя:
+	последовательность символов, которая начинается с буквы и включает только буквы и цифры
 */
 #include <iostream>
 #include <string>
@@ -68,9 +75,13 @@ const char number = '8';
 const std::string prompt = "> ";
 const std::string result = "= ";
 
-const char name = 'a';
-const char let = 'L';
+const char name = 'n';	//Variable name Token
+
+const char let = 'L';					//declaration Token
 const std::string declkey = "let";
+
+const char assign = 'A';				//assignment Token
+const std::string assignkey = "assign";
 
 class Token
 {
@@ -99,13 +110,13 @@ std::vector <Variable> var_table;
 void set_value(std::string s, double d)
 	//присваивает объекту типа Variable с именем s значение d
 {
-	for (Variable v : var_table)
+	for (Variable &v : var_table)
 		if (v.name == s)
 		{
 			v.value = d;
 			return;
 		}
-	error("set_value: неопределённая переменная");
+	error("set_value: неопределённая переменная ", s);
 }
 double get_value(std::string s)
 	//возвращает значение переменной с именем s
@@ -114,7 +125,7 @@ double get_value(std::string s)
 		if (v.name == s) return v.value;
 	error("get_value: неопределённая переменная", s);
 }
-bool is_declared(std::string var)
+bool is_defined(std::string var)
 	//проверяет наличие переменной var в векторе var_table
 {
 	for (Variable v : var_table)
@@ -124,7 +135,7 @@ bool is_declared(std::string var)
 double define_name(std::string var, double val)
 	//добавляет пару (var, val) в вектор var_table
 {
-	if (is_declared(var)) error(var, " - неопределённая переменная");
+	if (is_defined(var)) error("define_name: уже определённая переменная ", var);
 	var_table.push_back(Variable{ var, val });
 	return val;
 }
@@ -182,9 +193,9 @@ Token Token_stream::get()
 			while (std::cin.get(ch) && (isalpha(ch) || isdigit(ch))) s += ch;
 			std::cin.putback(ch);
 			if (s == declkey)
-			{
 				return Token{ let };
-			}
+			if (s == assignkey)
+				return Token{ assign };
 			return Token{ name, s };
 		}
 		error("undefined token");
@@ -238,13 +249,13 @@ double primary()
 	case '-':
 		return -primary();
 	case name:
-		if (is_declared(t.name)) {
+		if (is_defined(t.name)) {
 			double d = get_value(t.name);
 			return d;
 		}
-		error(t.name, " is not declared");
+		error("undefined variable ", t.name);
 	default:
-		error("required a number");
+		error("required a number or variable");
 	}
 }
 
@@ -329,12 +340,29 @@ double declaration()
 	return d;
 }
 
+
+double assignment()
+{
+	Token t = ts.get();
+	if (t.kind != name) error("В присваивании ожидается имя переменной");
+	std::string var_name = t.name;
+
+	Token t2 = ts.get();
+	if (t2.kind != '=') error("Пропущен символ '=' в присваивании ", var_name);
+
+	double d = expression();
+	set_value(var_name, d);
+	return d;
+}
+
 double statement()
 {
 	Token t = ts.get();
 	switch (t.kind) {
 	case let:
 		return declaration();
+	case assign:
+		return assignment();
 	default:
 		ts.putback(t);
 		return expression();
@@ -346,6 +374,8 @@ void start_message()
 	std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl
 		<< "Вводите выражения с числами с плавающей точкой. (для подтеверждения введите символ " << print << ")" << std::endl
 		<< "Допустимые операторы: '+', '-', '*', '/'" << std::endl
+		<< "Также возможна работа с переменными:" << std::endl
+		<< "Объявление -> let 'Имя' = 'число или выражение' || Присваивание -> assign 'Имя' = 'число или выражение'" << std::endl
 		<< "Чтобы выйти, введите " << quit << std::endl;
 }
 
