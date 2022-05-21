@@ -1,8 +1,7 @@
 /*
 Программа выполняет функции калькулятора
 
-Грамматика программы:
-	
+Грамматика программы:	
 
 Вычисление:
 	Инструкция
@@ -43,6 +42,10 @@
 	( Выражение )
 	-Первичное
 	Имя
+	Квадратный корень
+
+Квадратный корень:
+	"sr" ( Выражение )
 
 Число:
 	Литерал с плавающей точкой
@@ -82,6 +85,9 @@ const std::string declkey = "let";
 
 const char assign = 'A';				//assignment Token
 const std::string assignkey = "assign";
+
+const char sr = 'S';					//square root Token
+const std::string srkey = "sr";
 
 class Token
 {
@@ -135,7 +141,7 @@ bool is_defined(std::string var)
 double define_name(std::string var, double val)
 	//добавляет пару (var, val) в вектор var_table
 {
-	if (is_defined(var)) error("define_name: уже определённая переменная ", var);
+	if (is_defined(var)) error("Уже определённая переменная ", var);
 	var_table.push_back(Variable{ var, val });
 	return val;
 }
@@ -186,7 +192,7 @@ Token Token_stream::get()
 		double val;
 		std::cin >> val;
 		return Token{ number, val };
-	default:
+	default:							//let, assign or name Tokens
 		if (std::isalpha(ch)) {
 			std::cin.putback(ch);
 			std::string s;
@@ -196,9 +202,11 @@ Token Token_stream::get()
 				return Token{ let };
 			if (s == assignkey)
 				return Token{ assign };
+			if (s == srkey)
+				return Token{ sr };
 			return Token{ name, s };
 		}
-		error("undefined token");
+		error(std::string{ ch }, " - неопределённая лексема");
 	}
 }
 
@@ -229,11 +237,30 @@ void clean_up_mess()
 
 double expression();
 
+double square_root()
+{
+	Token t = ts.get();
+	switch (t.kind) {
+	case '(':
+	{
+		double d = expression();
+		t = ts.get();
+		if (t.kind != ')')
+			error("Пропущена ')' в записи квадратного корня");
+		if (d < 0)
+			error("Попытка извлечь квадратный корень из отрицательного числа");
+		return std::sqrt(d);
+	}
+	default:
+		error("В записи квадратного корня отсутствует '('");
+	}
+}
+
+
 double primary()
 {
 	Token t = ts.get();
-	switch (t.kind)
-	{
+	switch (t.kind) {
 	case '(':
 	{
 		double d = expression();
@@ -253,9 +280,11 @@ double primary()
 			double d = get_value(t.name);
 			return d;
 		}
-		error("undefined variable ", t.name);
+		error("Неизвестная переменная ", t.name);
+	case sr:
+		return square_root();
 	default:
-		error("required a number or variable");
+		error("Неккоректный ввод");
 	}
 }
 
@@ -319,6 +348,10 @@ double expression()
 			left -= term();
 			t = ts.get();
 			break;
+		case number:
+			error("Неожидаемый ввод числа");
+		case name:
+			error(t.name, " - неопределённая лексема или переменная");
 		default:
 			ts.putback(t);
 			return left;
@@ -371,12 +404,12 @@ double statement()
 
 void start_message()
 {
-	std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl
+	std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl << std::endl
 		<< "Вводите выражения с числами с плавающей точкой. (для подтеверждения введите символ " << print << ")" << std::endl
-		<< "Допустимые операторы: '+', '-', '*', '/'" << std::endl
+		<< "Допустимые операторы: '+', '-', '*', '/', sr(выражение) - квадратный корень." << std::endl << std::endl
 		<< "Также возможна работа с переменными:" << std::endl
-		<< "Объявление -> let 'Имя' = 'число или выражение' || Присваивание -> assign 'Имя' = 'число или выражение'" << std::endl
-		<< "Чтобы выйти, введите " << quit << std::endl;
+		<< "Объявление -> let 'Имя' = 'число или выражение' || Присваивание -> assign 'Имя' = 'число или выражение'" << std::endl << std::endl
+		<< "Чтобы выйти, введите " << quit << std::endl << std::endl;
 }
 
 void calculate()
@@ -404,6 +437,12 @@ int main()
 	srand(time(0));
 	rand();
 	SetConsoleOutputCP(1251);
+	try {
+		define_name("pi", 3.1415);
+	}
+	catch (std::exception& e) {
+		std::cerr << "ERROR : " << e.what() << std::endl;
+	}
 	start_message();
 	calculate();
 }
