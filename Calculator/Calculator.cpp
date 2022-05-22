@@ -39,13 +39,17 @@
 
 Первичное:
 	Число
-	( Выражение )
+	'(' Выражение ')'
 	-Первичное
 	Имя
 	Квадратный корень
+	Возведение в степень
 
 Квадратный корень:
-	"sr" ( Выражение )
+	"sr" '(' Выражение ')'
+
+Возведение в степень:
+	exp '(' Первичное ',' Первичное ')'
 
 Число:
 	Литерал с плавающей точкой
@@ -88,6 +92,9 @@ const std::string assignkey = "assign";
 
 const char sr = 'S';					//square root Token
 const std::string srkey = "sr";
+
+const char p = 'P';						//exponentiation Token
+const std::string pkey = "exp";
 
 class Token
 {
@@ -184,6 +191,7 @@ Token Token_stream::get()
 	case '/':
 	case '%':
 	case '=':
+	case ',':	//for exponentiation
 		return Token{ ch };
 	case '.':
 	case '0': case '1': case '2': case '3': case '4':
@@ -192,7 +200,7 @@ Token Token_stream::get()
 		double val;
 		std::cin >> val;
 		return Token{ number, val };
-	default:							//let, assign or name Tokens
+	default:							//string Tokens
 		if (std::isalpha(ch)) {
 			std::cin.putback(ch);
 			std::string s;
@@ -204,6 +212,8 @@ Token Token_stream::get()
 				return Token{ assign };
 			if (s == srkey)
 				return Token{ sr };
+			if (s == pkey)
+				return Token{ p };
 			return Token{ name, s };
 		}
 		error(std::string{ ch }, " - неопределённая лексема");
@@ -230,12 +240,40 @@ void Token_stream::ignore(char c)
 Token_stream ts;
 
 
+
 void clean_up_mess()
 {
 	ts.ignore(print);
 }
 
+double primary();
 double expression();
+
+double exponentiation()
+	//exp(x,y)
+	//exp(2,3) == 2*2*2 == 8
+{
+	Token t = ts.get();
+	switch (t.kind) {
+	case '(':
+	{
+		double x = primary();
+		t = ts.get();
+		if (t.kind != ',')
+			error("Пропущена ',' в записи возведения в степень");
+		double y = primary();
+		if (y != static_cast<int>(y))								//y must be integer
+			error("Нельзя возвести число в дробную степень");
+		t = ts.get();
+		if (t.kind != ')')
+			error("Пропущена ')' в записи возведения в степень");
+		double d = std::pow(x, y);
+		return d;
+	}
+	default:
+		error("Пропущена '(' в записи возведения в степень");
+	}
+}
 
 double square_root()
 {
@@ -283,8 +321,10 @@ double primary()
 		error("Неизвестная переменная ", t.name);
 	case sr:
 		return square_root();
+	case p:
+		return exponentiation();
 	default:
-		error("Неккоректный ввод");
+		error("Неполный ввод");
 	}
 }
 
@@ -406,7 +446,7 @@ void start_message()
 {
 	std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl << std::endl
 		<< "Вводите выражения с числами с плавающей точкой. (для подтеверждения введите символ " << print << ")" << std::endl
-		<< "Допустимые операторы: '+', '-', '*', '/', sr(выражение) - квадратный корень." << std::endl << std::endl
+		<< "Допустимые операторы: '+', '-', '*', '/', sr(9) - квадратный корень, exp(2, 3) - возведение в степень." << std::endl << std::endl
 		<< "Также возможна работа с переменными:" << std::endl
 		<< "Объявление -> let 'Имя' = 'число или выражение' || Присваивание -> assign 'Имя' = 'число или выражение'" << std::endl << std::endl
 		<< "Чтобы выйти, введите " << quit << std::endl << std::endl;
