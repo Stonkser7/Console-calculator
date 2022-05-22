@@ -15,7 +15,7 @@
 	Выражение
 
 Объявление:
-	"let" Имя '=' Выражение
+	'#' Имя '=' Выражение
 
 Присваивание:
 	"assign" Имя '=' Выражение
@@ -84,8 +84,7 @@ const std::string result = "= ";
 
 const char name = 'n';	//Variable name Token
 
-const char let = 'L';					//declaration Token
-const std::string declkey = "let";
+const char decl = '#';					//declaration Token
 
 const char assign = 'A';				//assignment Token
 const std::string assignkey = "assign";
@@ -183,6 +182,7 @@ Token Token_stream::get()
 	switch (ch) {
 	case print:	//print confirmation
 	case quit:	//exit
+	case decl:	//declaration Token
 	case '(':
 	case ')':
 	case '+':
@@ -206,8 +206,6 @@ Token Token_stream::get()
 			std::string s;
 			while (std::cin.get(ch) && (isalpha(ch) || isdigit(ch))) s += ch;
 			std::cin.putback(ch);
-			if (s == declkey)
-				return Token{ let };
 			if (s == assignkey)
 				return Token{ assign };
 			if (s == srkey)
@@ -260,7 +258,7 @@ double exponentiation()
 		double x = primary();
 		t = ts.get();
 		if (t.kind != ',')
-			error("Пропущена ',' в записи возведения в степень");
+			error("Пропущена ',' либо введдён некорректный символ в записи возведения в степень");
 		double y = primary();
 		if (y != static_cast<int>(y))								//y must be integer
 			error("Нельзя возвести число в дробную степень");
@@ -324,7 +322,7 @@ double primary()
 	case p:
 		return exponentiation();
 	default:
-		error("Неполный ввод");
+		error("Нераспознанный ввод");
 	}
 }
 
@@ -432,7 +430,7 @@ double statement()
 {
 	Token t = ts.get();
 	switch (t.kind) {
-	case let:
+	case decl:
 		return declaration();
 	case assign:
 		return assignment();
@@ -448,7 +446,7 @@ void start_message()
 		<< "Вводите выражения с числами с плавающей точкой. (для подтеверждения введите символ " << print << ")" << std::endl
 		<< "Допустимые операторы: '+', '-', '*', '/', sr(9) - квадратный корень, exp(2, 3) - возведение в степень." << std::endl << std::endl
 		<< "Также возможна работа с переменными:" << std::endl
-		<< "Объявление -> let 'Имя' = 'число или выражение' || Присваивание -> assign 'Имя' = 'число или выражение'" << std::endl << std::endl
+		<< "Объявление -> # 'Имя' = 'число или выражение' || Присваивание -> assign 'Имя' = 'число или выражение'" << std::endl << std::endl
 		<< "Чтобы выйти, введите " << quit << std::endl << std::endl;
 }
 
