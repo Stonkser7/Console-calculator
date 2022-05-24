@@ -1,61 +1,73 @@
 /*
-Программа выполняет функции калькулятора
+This program performs calculator operations
 
-Грамматика программы:	
+Grammar:	
 
-Вычисление:
-	Инструкция
-	Вывод
-	Выход
-	Вычисление Инструкция
+Calculate:
+	Statement
+	Input
+	Quit
+	Calculate Statement
+	Help
 
-Инструкция:
-	Объявление
-	Присваивание
-	Выражение
+Statement:
+	Declaration
+	Constant_Declaration
+	Assignment
+	Deletion
+	Expression
 
-Объявление:
-	'#' Имя '=' Выражение
+Declaration:
+	'#' Name '=' Expression
 
-Присваивание:
-	"assign" Имя '=' Выражение
+Constant_Declaration:
+	"const" Declaration
 
-Вывод:
-	;
+Assignment:
+	"let" Name '=' Expression
+
+Deletion:
+	"delete" Name
+
+Help:
+	"help"
+
+Input:
+	';'
 	
-Выход:
-	x
+Quit:
+	"exit"
 	
-Выражение:
-	Терм
-	Выражение + Терм
-	Выражение - Терм
+Expression:
+	Term
+	Expression + Term
+	Expression - Term
 	
-Терм:
-	Первичное
-	Терм * Первичное
-	Терм / Первичное
-	Терм % Первичное
+Term:
+	Primary
+	Term * Primary
+	Term / Primary
+	Term % Primary
 
-Первичное:
-	Число
-	'(' Выражение ')'
-	-Первичное
-	Имя
-	Квадратный корень
-	Возведение в степень
+Primary:
+	Number
+	'(' Expression ')'
+	-Primary
+	Name
+	Square root
+	Exponentiation
 
-Квадратный корень:
-	"sr" '(' Выражение ')'
+Square root:
+	"sr" '(' Expression ')'
 
-Возведение в степень:
-	exp '(' Первичное ',' Первичное ')'
+Exponentiation:
+	exp '(' Primary ',' Primary ')'
 
-Число:
-	Литерал с плавающей точкой
+Number:
+	Floating-point literal
 
-Имя:
-	последовательность символов, которая начинается с буквы и включает только буквы и цифры
+Name:
+	Sequence of characters that begins with a letter and includes only letters, numbers and '_'
 */
 #include <iostream>
 #include <string>
@@ -74,26 +86,36 @@ void error(std::string s1, std::string s2 = "")
 	throw std::runtime_error(s1 + s2);
 }
 
-
+const char help = 'H';
+const std::string helpkey = "help";
 
 const char print = ';';
+
 const char quit = 'x';
+const std::string quitkey = "exit";
+
 const char number = '8';
 const std::string prompt = "> ";
 const std::string result = "= ";
 
-const char name = 'n';	//Variable name Token
+const char name = 'N';						//Variable name Token
 
-const char decl = '#';					//declaration Token
+const char decl = '#';						//declaration Token
 
-const char assign = 'A';				//assignment Token
-const std::string assignkey = "assign";
+const char constprefix = 'C';
+const std::string constprefixkey = "const";	//constant variables declaration
 
-const char sr = 'S';					//square root Token
+const char assign = 'A';					//assignment Token
+const std::string assignkey = "let";
+
+const char del = 'D';						//delete Token
+const std::string delkey = "delete";
+
+const char sr = 'S';						//square root Token
 const std::string srkey = "sr";
 
-const char p = 'P';						//exponentiation Token
-const std::string pkey = "exp";
+const char e = 'E';							//exponentiation Token
+const std::string ekey = "exp";
 
 class Token
 {
@@ -115,41 +137,62 @@ class Variable {
 public:
 	std::string name;
 	double value;
+	bool is_const;
+
+	Variable(std::string s, double d, bool b) :name{ s }, value{ d }, is_const{ b } {};
 };
 
-std::vector <Variable> var_table;
+class Symbol_table {
+private:
+	std::vector <Variable> var_table;
+public:
+	void set_value(std::string s, double d);	//присваивает объекту типа Variable с именем s значение d
+	double get_value(std::string s);			//возвращает значение переменной с именем s
+	bool is_defined(std::string name);			//проверяет наличие переменной c именем name в векторе var_table
+	double define_var(Variable var);			//добавляет новую переменную var в вектор var_table
+	double delete_var(std::string name);		//Удаляет переменную с именем name из вектора var_table
+};
 
-void set_value(std::string s, double d)
-	//присваивает объекту типа Variable с именем s значение d
+void Symbol_table::set_value(std::string s, double d)
 {
-	for (Variable &v : var_table)
-		if (v.name == s)
-		{
-			v.value = d;
-			return;
+	for (Variable& v : var_table)
+		if (v.name == s) {
+			if (!v.is_const) {
+				v.value = d;
+				return;
+			}
+			error("Попытка присвоить значение константной переменной ", v.name);
 		}
-	error("set_value: неопределённая переменная ", s);
+	error("Неопределённая переменная ", s);
 }
-double get_value(std::string s)
-	//возвращает значение переменной с именем s
+double Symbol_table::get_value(std::string s)
 {
 	for (Variable v : var_table)
 		if (v.name == s) return v.value;
-	error("get_value: неопределённая переменная", s);
+	error("Попытка взятия значения у неопределённой переменной ", s);
 }
-bool is_defined(std::string var)
-	//проверяет наличие переменной var в векторе var_table
+bool Symbol_table::is_defined(std::string name)
 {
 	for (Variable v : var_table)
-		if (v.name == var) return true;
+		if (v.name == name) return true;
 	return false;
 }
-double define_name(std::string var, double val)
-	//добавляет пару (var, val) в вектор var_table
+double Symbol_table::define_var(Variable var)
 {
-	if (is_defined(var)) error("Уже определённая переменная ", var);
-	var_table.push_back(Variable{ var, val });
-	return val;
+	if (is_defined(var.name)) error("Уже определённая переменная ", var.name);
+	var_table.push_back(var);
+	return var.value;
+}
+double Symbol_table::delete_var(std::string name)
+{
+	for (int i = 0; i < var_table.size(); ++i) {
+		if (var_table[i].name == name) {
+			double d = var_table[i].value;
+			var_table.erase(var_table.begin() + i);
+			return d;
+		}
+	}
+	error("Попытка удалить несуществующую переменную ", name);
 }
 
 class Token_stream {
@@ -181,7 +224,6 @@ Token Token_stream::get()
 	std::cin >> ch;
 	switch (ch) {
 	case print:	//print confirmation
-	case quit:	//exit
 	case decl:	//declaration Token
 	case '(':
 	case ')':
@@ -200,18 +242,26 @@ Token Token_stream::get()
 		double val;
 		std::cin >> val;
 		return Token{ number, val };
-	default:							//string Tokens
+	default:									//string Tokens
 		if (std::isalpha(ch)) {
 			std::cin.putback(ch);
 			std::string s;
-			while (std::cin.get(ch) && (isalpha(ch) || isdigit(ch))) s += ch;
+			while (std::cin.get(ch) && (isalpha(ch) || isdigit(ch) || ch == '_')) s += ch;
 			std::cin.putback(ch);
 			if (s == assignkey)
-				return Token{ assign };
+				return Token{ assign };			//assign operator
 			if (s == srkey)
-				return Token{ sr };
-			if (s == pkey)
-				return Token{ p };
+				return Token{ sr };				//square root
+			if (s == ekey)
+				return Token{ e };				//exponentiation
+			if (s == quitkey)
+				return Token{ quit };			//exit
+			if (s == constprefixkey)
+				return Token{ constprefix };	//constant variables declaration
+			if (s == helpkey)
+				return Token{ help };			//help information output
+			if (s == delkey)
+				return Token{ del };			//deletion variable
 			return Token{ name, s };
 		}
 		error(std::string{ ch }, " - неопределённая лексема");
@@ -236,6 +286,8 @@ void Token_stream::ignore(char c)
 
 
 Token_stream ts;
+
+Symbol_table symbol_table;
 
 
 
@@ -312,17 +364,17 @@ double primary()
 	case '-':
 		return -primary();
 	case name:
-		if (is_defined(t.name)) {
-			double d = get_value(t.name);
+		if (symbol_table.is_defined(t.name)) {
+			double d = symbol_table.get_value(t.name);
 			return d;
 		}
 		error("Неизвестная переменная ", t.name);
 	case sr:
 		return square_root();
-	case p:
+	case e:
 		return exponentiation();
 	default:
-		error("Нераспознанный ввод");
+		error("Ожидается корректный ввод");
 	}
 }
 
@@ -333,7 +385,7 @@ double term() {
 	{
 		switch (t.kind)
 		{
-		case '(':			//for (1+3)(2+4) or 5(2+3) notation
+		case '(':			//for (1+3)(2+4) or 5(2+3) notation (the same as Term * Primary)
 			ts.putback(t);
 			left *= primary();
 			t = ts.get();
@@ -362,7 +414,7 @@ double term() {
 			t = ts.get();
 			break;
 		}
-		case number:
+		case number:						//error handling
 			error("excess number");
 		default:
 			ts.putback(t);
@@ -386,9 +438,9 @@ double expression()
 			left -= term();
 			t = ts.get();
 			break;
-		case number:
+		case number:								//error handling
 			error("Неожидаемый ввод числа");
-		case name:
+		case name:									//error handling
 			error(t.name, " - неопределённая лексема или переменная");
 		default:
 			ts.putback(t);
@@ -397,7 +449,7 @@ double expression()
 	}
 }
 
-double declaration()
+double declaration(bool is_const = false)
 {
 	Token t = ts.get();
 	if (t.kind != name) error("В объявлении ожидается имя переменной");
@@ -406,11 +458,22 @@ double declaration()
 	Token t2 = ts.get();
 	if (t2.kind != '=') error("Пропущен символ '=' в объявлении ", var_name);
 
-	double d = expression();
-	define_name(var_name, d);
-	return d;
+	double var_value = expression();
+
+	Variable var{ var_name, var_value, is_const };
+
+	symbol_table.define_var(var);
+	return var_value;
 }
 
+double constant_declaration()
+{
+	Token t = ts.get();
+	if (t.kind != decl) error("Пропущен спецификатор в объявлении константной переменной");
+
+	bool is_constant = true;
+	return declaration(is_constant);
+}
 
 double assignment()
 {
@@ -422,9 +485,19 @@ double assignment()
 	if (t2.kind != '=') error("Пропущен символ '=' в присваивании ", var_name);
 
 	double d = expression();
-	set_value(var_name, d);
+	symbol_table.set_value(var_name, d);
 	return d;
 }
+
+double deletion()
+{
+	Token t = ts.get();
+	if (t.kind != name) error("В опрерации удаления ожидается имя переменной");
+
+	double d = symbol_table.delete_var(t.name);
+	return d;
+}
+
 
 double statement()
 {
@@ -432,22 +505,37 @@ double statement()
 	switch (t.kind) {
 	case decl:
 		return declaration();
+	case constprefix:
+		return constant_declaration();
 	case assign:
 		return assignment();
+	case del:
+		return deletion();
 	default:
 		ts.putback(t);
 		return expression();
 	}
 }
 
+void help_message()
+{
+	std::cout << std::endl << "СПРАВКА:" << std::endl
+		<< "Вводите инструкции, чтобы программа их выполнила. (для подтеверждения введите символ " << print << ")" << std::endl
+		<< "Допустимые операторы: '+', '-', '*', '/', sr( ) - квадратный корень, exp( , ) - возведение в степень." << std::endl << std::endl
+		<< "Также возможна работа с переменными:" << std::endl
+		<< "---------------------------------------------" << std::endl
+		<< "# 'Имя' = 'выражение' <- Объявление (префикс const для константных переменных)" << std::endl
+		<< "let 'Имя' = 'выражение' <- Присваивание" << std::endl << std::endl
+		<< "Имена переменных должны начинаться с буквы и могут содержать буквы, цифры и знаки подчёркивания" << std::endl
+		<< "---------------------------------------------" << std::endl << std::endl
+		<< "Чтобы выйти из программы, введите " << quitkey << std::endl << std::endl;
+}
+
 void start_message()
 {
-	std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl << std::endl
-		<< "Вводите выражения с числами с плавающей точкой. (для подтеверждения введите символ " << print << ")" << std::endl
-		<< "Допустимые операторы: '+', '-', '*', '/', sr(9) - квадратный корень, exp(2, 3) - возведение в степень." << std::endl << std::endl
-		<< "Также возможна работа с переменными:" << std::endl
-		<< "Объявление -> # 'Имя' = 'число или выражение' || Присваивание -> assign 'Имя' = 'число или выражение'" << std::endl << std::endl
-		<< "Чтобы выйти, введите " << quit << std::endl << std::endl;
+	std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl
+		<< "Введите " << helpkey <<  " для показа справочной информации" << std::endl
+		<< "Чтобы выйти, введите " << quitkey << std::endl << std::endl;
 }
 
 void calculate()
@@ -456,10 +544,14 @@ void calculate()
 		try {
 			std::cout << prompt;
 			Token t = ts.get();
-			while (t.kind == print)
+			while (t.kind == print || t.kind == quit || t.kind == help) {
+				if (t.kind == quit)
+					return;
+				if (t.kind == help) {
+					help_message();
+				}
 				t = ts.get();
-			if (t.kind == quit)
-				break;
+			}
 			ts.putback(t);
 			std::cout << result << statement() << std::endl;
 		}
@@ -476,7 +568,8 @@ int main()
 	rand();
 	SetConsoleOutputCP(1251);
 	try {
-		define_name("pi", 3.1415);
+		bool is_const = true;
+		symbol_table.define_var(Variable{ "pi", 3.1415, is_const });
 	}
 	catch (std::exception& e) {
 		std::cerr << "ERROR : " << e.what() << std::endl;
