@@ -86,36 +86,38 @@ void error(std::string s1, std::string s2 = "")
 	throw std::runtime_error(s1 + s2);
 }
 
-const char help = 'H';
-const std::string helpkey = "help";
+namespace T_list {
+	const char help = 'H';
+	const std::string helpkey = "help";
 
-const char print = ';';
+	const char print = ';';
 
-const char quit = 'x';
-const std::string quitkey = "exit";
+	const char quit = 'x';
+	const std::string quitkey = "exit";
 
-const char number = '8';
-const std::string prompt = "> ";
-const std::string result = "= ";
+	const char number = '8';
+	const std::string prompt = "> ";
+	const std::string result = "= ";
 
-const char name = 'N';						//Variable name Token
+	const char name = 'N';						//Variable name Token
 
-const char decl = '#';						//declaration Token
+	const char decl = '#';						//declaration Token
 
-const char constprefix = 'C';
-const std::string constprefixkey = "const";	//constant variables declaration
+	const char constprefix = 'C';
+	const std::string constprefixkey = "const";	//constant variables declaration
 
-const char assign = 'A';					//assignment Token
-const std::string assignkey = "let";
+	const char assign = 'A';					//assignment Token
+	const std::string assignkey = "let";
 
-const char del = 'D';						//delete Token
-const std::string delkey = "delete";
+	const char del = 'D';						//delete Token
+	const std::string delkey = "delete";
 
-const char sr = 'S';						//square root Token
-const std::string srkey = "sr";
+	const char sr = 'S';						//square root Token
+	const std::string srkey = "sr";
 
-const char e = 'E';							//exponentiation Token
-const std::string ekey = "exp";
+	const char e = 'E';							//exponentiation Token
+	const std::string ekey = "exp";
+}
 
 class Token
 {
@@ -223,8 +225,8 @@ Token Token_stream::get()
 	char ch;
 	std::cin >> ch;
 	switch (ch) {
-	case print:	//print confirmation
-	case decl:	//declaration Token
+	case T_list::print:	//print confirmation
+	case T_list::decl:	//declaration Token
 	case '(':
 	case ')':
 	case '+':
@@ -241,28 +243,29 @@ Token Token_stream::get()
 		std::cin.putback(ch);
 		double val;
 		std::cin >> val;
-		return Token{ number, val };
+		return Token{ T_list::number, val };
 	default:									//string Tokens
 		if (std::isalpha(ch)) {
 			std::cin.putback(ch);
 			std::string s;
 			while (std::cin.get(ch) && (isalpha(ch) || isdigit(ch) || ch == '_')) s += ch;
 			std::cin.putback(ch);
-			if (s == assignkey)
-				return Token{ assign };			//assign operator
-			if (s == srkey)
-				return Token{ sr };				//square root
-			if (s == ekey)
-				return Token{ e };				//exponentiation
-			if (s == quitkey)
-				return Token{ quit };			//exit
-			if (s == constprefixkey)
-				return Token{ constprefix };	//constant variables declaration
-			if (s == helpkey)
-				return Token{ help };			//help information output
-			if (s == delkey)
-				return Token{ del };			//deletion variable
-			return Token{ name, s };
+			if (s == T_list::assignkey)
+				return Token{ T_list::assign };			//assign operator
+			if (s == T_list::srkey)
+				return Token{ T_list::sr };				//square root
+			if (s == T_list::ekey)
+				return Token{ T_list::e };				//exponentiation
+			if (s == T_list::quitkey)
+				return Token{ T_list::quit };			//exit
+			if (s == T_list::constprefixkey)
+				return Token{ T_list::constprefix };	//constant variables declaration
+			if (s == T_list::helpkey)
+				return Token{ T_list::help };			//help information output
+			if (s == T_list::delkey)
+				return Token{ T_list::del };			//deletion variable
+
+			return Token{ T_list::name, s };
 		}
 		error(std::string{ ch }, " - неопределённая лексема");
 	}
@@ -285,21 +288,21 @@ void Token_stream::ignore(char c)
 
 
 
-Token_stream ts;
-
-Symbol_table symbol_table;
-
-
-
-void clean_up_mess()
-{
-	ts.ignore(print);
+namespace var {
+	Symbol_table symbol_table;
 }
 
-double primary();
-double expression();
 
-double exponentiation()
+
+void clean_up_mess(Token_stream& ts)
+{
+	ts.ignore(T_list::print);
+}
+
+double primary(Token_stream&);
+double expression(Token_stream&);
+
+double exponentiation(Token_stream& ts)
 	//exp(x,y)
 	//exp(2,3) == 2*2*2 == 8
 {
@@ -307,11 +310,11 @@ double exponentiation()
 	switch (t.kind) {
 	case '(':
 	{
-		double x = primary();
+		double x = primary(ts);
 		t = ts.get();
 		if (t.kind != ',')
 			error("Пропущена ',' либо введдён некорректный символ в записи возведения в степень");
-		double y = primary();
+		double y = primary(ts);
 		if (y != static_cast<int>(y))								//y must be integer
 			error("Нельзя возвести число в дробную степень");
 		t = ts.get();
@@ -325,13 +328,13 @@ double exponentiation()
 	}
 }
 
-double square_root()
+double square_root(Token_stream& ts)
 {
 	Token t = ts.get();
 	switch (t.kind) {
 	case '(':
 	{
-		double d = expression();
+		double d = expression(ts);
 		t = ts.get();
 		if (t.kind != ')')
 			error("Пропущена ')' в записи квадратного корня");
@@ -345,13 +348,13 @@ double square_root()
 }
 
 
-double primary()
+double primary(Token_stream& ts)
 {
 	Token t = ts.get();
 	switch (t.kind) {
 	case '(':
 	{
-		double d = expression();
+		double d = expression(ts);
 		t = ts.get();
 		if (t.kind != ')')
 		{
@@ -359,27 +362,27 @@ double primary()
 		}
 		return d;
 	}
-	case number:
+	case T_list::number:
 		return t.value;
 	case '-':
-		return -primary();
-	case name:
-		if (symbol_table.is_defined(t.name)) {
-			double d = symbol_table.get_value(t.name);
+		return -primary(ts);
+	case T_list::name:
+		if (var::symbol_table.is_defined(t.name)) {
+			double d = var::symbol_table.get_value(t.name);
 			return d;
 		}
 		error("Неизвестная переменная ", t.name);
-	case sr:
-		return square_root();
-	case e:
-		return exponentiation();
+	case T_list::sr:
+		return square_root(ts);
+	case T_list::e:
+		return exponentiation(ts);
 	default:
 		error("Ожидается корректный ввод");
 	}
 }
 
-double term() {
-	double left = primary();
+double term(Token_stream& ts) {
+	double left = primary(ts);
 	Token t = ts.get();
 	while (true)
 	{
@@ -387,16 +390,16 @@ double term() {
 		{
 		case '(':			//for (1+3)(2+4) or 5(2+3) notation (the same as Term * Primary)
 			ts.putback(t);
-			left *= primary();
+			left *= primary(ts);
 			t = ts.get();
 			break;
 		case '*':
-			left *= primary();
+			left *= primary(ts);
 			t = ts.get();
 			break;
 		case '/':
 		{
-			double d = primary();
+			double d = primary(ts);
 			if (d == 0)
 			{
 				error("division by zero");
@@ -407,14 +410,14 @@ double term() {
 		}
 		case '%':
 		{
-			double d = primary();
+			double d = primary(ts);
 			if (d == 0)
 				error("division by zero");
 			left = fmod(left, d);
 			t = ts.get();
 			break;
 		}
-		case number:						//error handling
+		case T_list::number:						//error handling
 			error("excess number");
 		default:
 			ts.putback(t);
@@ -423,24 +426,24 @@ double term() {
 	}
 }
 
-double expression()
+double expression(Token_stream& ts)
 {
-	double left = term();
+	double left = term(ts);
 	Token t = ts.get();
 	while (true)
 	{
 		switch (t.kind) {
 		case '+':
-			left += term();
+			left += term(ts);
 			t = ts.get();
 			break;
 		case '-':
-			left -= term();
+			left -= term(ts);
 			t = ts.get();
 			break;
-		case number:								//error handling
+		case T_list::number:								//error handling
 			error("Неожидаемый ввод числа");
-		case name:									//error handling
+		case T_list::name:									//error handling
 			error(t.name, " - неопределённая лексема или переменная");
 		default:
 			ts.putback(t);
@@ -449,78 +452,78 @@ double expression()
 	}
 }
 
-double declaration(bool is_const = false)
+double declaration(Token_stream& ts, bool is_const = false)
 {
 	Token t = ts.get();
-	if (t.kind != name) error("В объявлении ожидается имя переменной");
+	if (t.kind != T_list::name) error("В объявлении ожидается имя переменной");
 	std::string var_name = t.name;
 
 	Token t2 = ts.get();
 	if (t2.kind != '=') error("Пропущен символ '=' в объявлении ", var_name);
 
-	double var_value = expression();
+	double var_value = expression(ts);
 
 	Variable var{ var_name, var_value, is_const };
 
-	symbol_table.define_var(var);
+	var::symbol_table.define_var(var);
 	return var_value;
 }
 
-double constant_declaration()
+double constant_declaration(Token_stream& ts)
 {
 	Token t = ts.get();
-	if (t.kind != decl) error("Пропущен спецификатор в объявлении константной переменной");
+	if (t.kind != T_list::decl) error("Пропущен спецификатор в объявлении константной переменной");
 
 	bool is_constant = true;
-	return declaration(is_constant);
+	return declaration(ts, is_constant);
 }
 
-double assignment()
+double assignment(Token_stream& ts)
 {
 	Token t = ts.get();
-	if (t.kind != name) error("В присваивании ожидается имя переменной");
+	if (t.kind != T_list::name) error("В присваивании ожидается имя переменной");
 	std::string var_name = t.name;
 
 	Token t2 = ts.get();
 	if (t2.kind != '=') error("Пропущен символ '=' в присваивании ", var_name);
 
-	double d = expression();
-	symbol_table.set_value(var_name, d);
+	double d = expression(ts);
+	var::symbol_table.set_value(var_name, d);
 	return d;
 }
 
-double deletion()
+double deletion(Token_stream& ts)
 {
 	Token t = ts.get();
-	if (t.kind != name) error("В опрерации удаления ожидается имя переменной");
+	if (t.kind != T_list::name) error("В опрерации удаления ожидается имя переменной");
 
-	double d = symbol_table.delete_var(t.name);
+	double d = var::symbol_table.delete_var(t.name);
 	return d;
 }
 
 
-double statement()
+double statement(Token_stream& ts)
 {
 	Token t = ts.get();
 	switch (t.kind) {
-	case decl:
-		return declaration();
-	case constprefix:
-		return constant_declaration();
-	case assign:
-		return assignment();
-	case del:
-		return deletion();
+	case T_list::decl:
+		return declaration(ts);
+	case T_list::constprefix:
+		return constant_declaration(ts);
+	case T_list::assign:
+		return assignment(ts);
+	case T_list::del:
+		return deletion(ts);
 	default:
 		ts.putback(t);
-		return expression();
+		return expression(ts);
 	}
 }
 
 void help_message()
 {
 	std::cout << std::endl << "СПРАВКА:" << std::endl
-		<< "Вводите инструкции, чтобы программа их выполнила. (для подтеверждения введите символ " << print << ")" << std::endl
+		<< "Вводите инструкции, чтобы программа их выполнила. (для подтеверждения введите символ " << T_list::print << ")" << std::endl
 		<< "Допустимые операторы: '+', '-', '*', '/', sr( ) - квадратный корень, exp( , ) - возведение в степень." << std::endl << std::endl
 		<< "Также возможна работа с переменными:" << std::endl
 		<< "---------------------------------------------" << std::endl
@@ -528,36 +531,36 @@ void help_message()
 		<< "let 'Имя' = 'выражение' <- Присваивание" << std::endl << std::endl
 		<< "Имена переменных должны начинаться с буквы и могут содержать буквы, цифры и знаки подчёркивания" << std::endl
 		<< "---------------------------------------------" << std::endl << std::endl
-		<< "Чтобы выйти из программы, введите " << quitkey << std::endl << std::endl;
+		<< "Чтобы выйти из программы, введите " << T_list::quitkey << std::endl << std::endl;
 }
 
 void start_message()
 {
 	std::cout << "Добро пожаловать в программу-калькулятор!" << std::endl
-		<< "Введите " << helpkey <<  " для показа справочной информации" << std::endl
-		<< "Чтобы выйти, введите " << quitkey << std::endl << std::endl;
+		<< "Введите " << T_list::helpkey <<  " для показа справочной информации" << std::endl
+		<< "Чтобы выйти, введите " << T_list::quitkey << std::endl << std::endl;
 }
 
-void calculate()
+void calculate(Token_stream& ts)
 {
 	while (std::cin) {
 		try {
-			std::cout << prompt;
+			std::cout << T_list::prompt;
 			Token t = ts.get();
-			while (t.kind == print || t.kind == quit || t.kind == help) {
-				if (t.kind == quit)
+			while (t.kind == T_list::print || t.kind == T_list::quit || t.kind == T_list::help) {
+				if (t.kind == T_list::quit)
 					return;
-				if (t.kind == help) {
+				if (t.kind == T_list::help) {
 					help_message();
 				}
 				t = ts.get();
 			}
 			ts.putback(t);
-			std::cout << result << statement() << std::endl;
+			std::cout << T_list::result << statement(ts) << std::endl;
 		}
 		catch (std::exception& e) {
 			std::cerr << "ERROR : " << e.what() << std::endl;
-			clean_up_mess();
+			clean_up_mess(ts);
 		}
 	}
 }
@@ -569,11 +572,12 @@ int main()
 	SetConsoleOutputCP(1251);
 	try {
 		bool is_const = true;
-		symbol_table.define_var(Variable{ "pi", 3.1415, is_const });
+		var::symbol_table.define_var(Variable{ "pi", 3.1415, is_const });
 	}
 	catch (std::exception& e) {
 		std::cerr << "ERROR : " << e.what() << std::endl;
 	}
 	start_message();
-	calculate();
+	Token_stream ts;
+	calculate(ts);
 }
