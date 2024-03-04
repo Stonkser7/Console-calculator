@@ -164,25 +164,25 @@ void Symbol_table::set_value(std::string name, double d)
 				v.m_value = d;
 				return;
 			}
-			error("Попытка изменить значение константной переменной " + v.m_name);
+			error("Нельзя изменить значение переменной " + v.m_name + ":\nона константная");
 		}
-	error("Неопределённая переменная " + name);
+	error("Невозможно присвоить значение переменной" + name + ":\nона не определена");
 }
 double Symbol_table::get_value(std::string name) const
 {
-	for (Variable v : m_var_table)
+	for (const Variable& v : m_var_table)
 		if (v.m_name == name) return v.m_value;
-	error("Попытка взятия значения у неопределённой переменной " + name);
+	error("Невозможно обработать значение переменной " + name + ":\nона не определена");
 }
 bool Symbol_table::is_defined(std::string name) const
 {
-	for (Variable v : m_var_table)
+	for (const Variable& v : m_var_table)
 		if (v.m_name == name) return true;
 	return false;
 }
 double Symbol_table::define_var(Variable var)
 {
-	if (is_defined(var.m_name)) error("Уже определённая переменная " + var.m_name);
+	if (is_defined(var.m_name)) error("Переменная " + var.m_name + " уже определена");
 	m_var_table.push_back(var);
 	return var.m_value;
 }
@@ -195,7 +195,7 @@ double Symbol_table::delete_var(std::string name)
 			return d;
 		}
 	}
-	error("Попытка удалить несуществующую переменную " + name);
+	error("Невозможно удалить переменную " + name + ":\nона и так не существует");
 }
 
 
@@ -346,7 +346,7 @@ double square_root(Token_stream& ts)
 		return std::sqrt(d);
 	}
 	default:
-		error("В записи квадратного корня отсутствует '('");
+		error("Пропущена '(' в записи квадратного корня");
 	}
 }
 
@@ -475,7 +475,7 @@ double declaration(Token_stream& ts, bool is_const = false)
 double constant_declaration(Token_stream& ts)
 {
 	Token t = ts.get();
-	if (t.m_kind != Tok_list::decl) error("Пропущен спецификатор в объявлении константной переменной");
+	if (t.m_kind != Tok_list::decl) error("Пропущен спецификатор '#' в объявлении константной переменной");
 
 	bool is_constant = true;
 	return declaration(ts, is_constant);
@@ -532,9 +532,9 @@ double statement(Token_stream& ts)
 void help_message()
 {
 	std::cout << std::endl << "СПРАВКА:" << std::endl
-		<< "Вводите инструкции, чтобы программа их выполнила. (для подтеверждения введите символ " << Tok_list::print << ")" << std::endl
+		<< "Вводите инструкции, чтобы программа их выполнила. (для подтеверждения вводите символ " << Tok_list::print << ")" << std::endl
 		<< "Допустимые операторы: '+', '-', '*', '/', sr( ) - квадратный корень, pow( , ) - возведение в степень." << std::endl << std::endl
-		<< "Также возможна работа с переменными:" << std::endl
+		<< "Возможна работа с переменными:" << std::endl
 		<< "---------------------------------------------" << std::endl
 		<< "# 'Имя' = 'выражение' <- Объявление (префикс const для константных переменных)" << std::endl
 		<< "let 'Имя' = 'выражение' <- Присваивание" << std::endl
