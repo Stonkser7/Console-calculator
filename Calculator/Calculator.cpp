@@ -55,13 +55,13 @@ Primary:
 	-Primary
 	Name
 	Square root
-	Exponentiation
+	Power
 
 Square root:
 	"sr" '(' Expression ')'
 
-Exponentiation:
-	exp '(' Primary ',' Primary ')'
+Power:
+	"pow" '(' Primary ',' Primary ')'
 
 Number:
 	Floating-point literal
@@ -81,9 +81,9 @@ Name:
 #include <cctype>
 
 
-void error(std::string s1, std::string s2 = "")
+void error(std::string msg)
 {
-	throw std::runtime_error(s1 + s2);
+	throw std::runtime_error(msg);
 }
 
 namespace Tok_list {
@@ -115,87 +115,87 @@ namespace Tok_list {
 	const char sr = 'S';						//square root Token
 	const std::string srkey = "sr";
 
-	const char e = 'E';							//exponentiation Token
-	const std::string ekey = "exp";
+	const char p = 'P';							//power Token
+	const std::string powkey = "pow";
 }
 
 class Token
 {
 public:
-	char kind;
-	double value;
-	std::string name;
+	char m_kind;
+	double m_value;
+	std::string m_name;
 
 	Token() {};
 
-	Token(char ch) :kind{ ch } {};
+	Token(char ch) :m_kind{ ch } {};
 
-	Token(char ch, double d) :kind{ ch }, value{ d } {};
+	Token(char ch, double d) :m_kind{ ch }, m_value{ d } {};
 
-	Token(char ch, std::string s) :kind{ ch }, name{ s } {};
+	Token(char ch, std::string s) :m_kind{ ch }, m_name{ s } {};
 };
 
 class Variable {
 public:
-	std::string name;
-	double value;
-	bool is_const;
+	std::string m_name;
+	double m_value;
+	bool m_is_const;
 
-	Variable(std::string s, double d, bool b) :name{ s }, value{ d }, is_const{ b } {};
+	Variable(std::string name, double val, bool is_const) :m_name{ name }, m_value{ val }, m_is_const{ is_const } {};
 };
 
 class Symbol_table {
 private:
-	std::vector <Variable> var_table;
+	std::vector <Variable> m_var_table;
 public:
-	void set_value(std::string s, double d);	//присваивает объекту типа Variable с именем s значение d
-	double get_value(std::string s) const;		//возвращает значение переменной с именем s
+	void set_value(std::string name, double d);	//присваивает объекту типа Variable с именем name значение d
+	double get_value(std::string name) const;		//возвращает значение переменной с именем name
 	bool is_defined(std::string name) const;	//проверяет наличие переменной c именем name в векторе var_table
 	double define_var(Variable var);			//добавляет новую переменную var в вектор var_table
 	double delete_var(std::string name);		//Удаляет переменную с именем name из вектора var_table
 };
 
 //Symbol_table class definitions
-void Symbol_table::set_value(std::string s, double d)
+void Symbol_table::set_value(std::string name, double d)
 {
-	for (Variable& v : var_table)
-		if (v.name == s) {
-			if (!v.is_const) {
-				v.value = d;
+	for (Variable& v : m_var_table)
+		if (v.m_name == name) {
+			if (!v.m_is_const) {
+				v.m_value = d;
 				return;
 			}
-			error("Попытка присвоить значение константной переменной ", v.name);
+			error("Попытка изменить значение константной переменной " + v.m_name);
 		}
-	error("Неопределённая переменная ", s);
+	error("Неопределённая переменная " + name);
 }
-double Symbol_table::get_value(std::string s) const
+double Symbol_table::get_value(std::string name) const
 {
-	for (Variable v : var_table)
-		if (v.name == s) return v.value;
-	error("Попытка взятия значения у неопределённой переменной ", s);
+	for (Variable v : m_var_table)
+		if (v.m_name == name) return v.m_value;
+	error("Попытка взятия значения у неопределённой переменной " + name);
 }
 bool Symbol_table::is_defined(std::string name) const
 {
-	for (Variable v : var_table)
-		if (v.name == name) return true;
+	for (Variable v : m_var_table)
+		if (v.m_name == name) return true;
 	return false;
 }
 double Symbol_table::define_var(Variable var)
 {
-	if (is_defined(var.name)) error("Уже определённая переменная ", var.name);
-	var_table.push_back(var);
-	return var.value;
+	if (is_defined(var.m_name)) error("Уже определённая переменная " + var.m_name);
+	m_var_table.push_back(var);
+	return var.m_value;
 }
 double Symbol_table::delete_var(std::string name)
 {
-	for (int i = 0; i < var_table.size(); ++i) {
-		if (var_table[i].name == name) {
-			double d = var_table[i].value;
-			var_table.erase(var_table.begin() + i);
+	for (int i = 0; i < m_var_table.size(); ++i) {
+		if (m_var_table[i].m_name == name) {
+			double d = m_var_table[i].m_value;
+			m_var_table.erase(m_var_table.begin() + i);
 			return d;
 		}
 	}
-	error("Попытка удалить несуществующую переменную ", name);
+	error("Попытка удалить несуществующую переменную " + name);
 }
 
 
@@ -206,24 +206,24 @@ public:
 	void putback(Token t);
 	void ignore(char c);	//отбрасывает символы до символа c включительно
 private:
-	bool full{ false };
-	Token buffer;
+	bool m_full{ false };
+	Token m_buffer;
 };
 
 void Token_stream::putback(Token t)
 {
-	if (full)
+	if (m_full)
 		error("Token_stream::putback(): buffer is full");
-	buffer = t;
-	full = true;
+	m_buffer = t;
+	m_full = true;
 }
 
 Token Token_stream::get()
 {
-	if (full)
+	if (m_full)
 	{
-		full = false;
-		return buffer;
+		m_full = false;
+		return m_buffer;
 	}
 	char ch;
 	std::cin >> ch;
@@ -238,7 +238,7 @@ Token Token_stream::get()
 	case '/':
 	case '%':
 	case '=':
-	case ',':	//for exponentiation
+	case ',':				//',' for functions
 		return Token{ ch };
 	case '.':
 	case '0': case '1': case '2': case '3': case '4':
@@ -257,8 +257,8 @@ Token Token_stream::get()
 				return Token{ Tok_list::assign };			//assign operator
 			if (s == Tok_list::srkey)
 				return Token{ Tok_list::sr };				//square root
-			if (s == Tok_list::ekey)
-				return Token{ Tok_list::e };				//exponentiation
+			if (s == Tok_list::powkey)
+				return Token{ Tok_list::p };				//power
 			if (s == Tok_list::quitkey)
 				return Token{ Tok_list::quit };			//exit
 			if (s == Tok_list::constprefixkey)
@@ -270,18 +270,18 @@ Token Token_stream::get()
 
 			return Token{ Tok_list::name, s };
 		}
-		error(std::string{ ch }, " - неопределённая лексема");
+		error(std::string{ ch } + " - неопределённая лексема");
 	}
 }
 
 void Token_stream::ignore(char c)
 {
-	if (full && c == buffer.kind) {	//проверяем буфер
-		full = false;
+	if (m_full && c == m_buffer.m_kind) {	//проверяем буфер
+		m_full = false;
 		return;
 	}
 
-	full = false;
+	m_full = false;
 
 	//проверяем входные данные
 	char ch = 0;
@@ -305,23 +305,23 @@ void clean_up_mess(Token_stream& ts)
 double primary(Token_stream&);
 double expression(Token_stream&);
 
-double exponentiation(Token_stream& ts)
+double power(Token_stream& ts)
 	//exp(x,y)
 	//exp(2,3) == 2*2*2 == 8
 {
 	Token t = ts.get();
-	switch (t.kind) {
+	switch (t.m_kind) {
 	case '(':
 	{
-		double x = primary(ts);
+		double x = expression(ts);
 		t = ts.get();
-		if (t.kind != ',')
+		if (t.m_kind != ',')
 			error("Пропущена ',' либо введдён некорректный символ в записи возведения в степень");
-		double y = primary(ts);
+		double y = expression(ts);
 		if (y != static_cast<int>(y))								//y must be integer
-			error("Нельзя возвести число в дробную степень");
+			error("Показатель степени должен быть целым числом");
 		t = ts.get();
-		if (t.kind != ')')
+		if (t.m_kind != ')')
 			error("Пропущена ')' в записи возведения в степень");
 		double d = std::pow(x, y);
 		return d;
@@ -334,15 +334,15 @@ double exponentiation(Token_stream& ts)
 double square_root(Token_stream& ts)
 {
 	Token t = ts.get();
-	switch (t.kind) {
+	switch (t.m_kind) {
 	case '(':
 	{
 		double d = expression(ts);
 		t = ts.get();
-		if (t.kind != ')')
+		if (t.m_kind != ')')
 			error("Пропущена ')' в записи квадратного корня");
 		if (d < 0)
-			error("Попытка извлечь квадратный корень из отрицательного числа");
+			error("Нельзя извлечь квадратный корень из отрицательного числа");
 		return std::sqrt(d);
 	}
 	default:
@@ -354,31 +354,31 @@ double square_root(Token_stream& ts)
 double primary(Token_stream& ts)
 {
 	Token t = ts.get();
-	switch (t.kind) {
+	switch (t.m_kind) {
 	case '(':
 	{
 		double d = expression(ts);
 		t = ts.get();
-		if (t.kind != ')')
+		if (t.m_kind != ')')
 		{
-			error("required ')'");
+			error("пропущена ')'");
 		}
 		return d;
 	}
 	case Tok_list::number:
-		return t.value;
+		return t.m_value;
 	case '-':
 		return -primary(ts);
 	case Tok_list::name:
-		if (var::symbol_table.is_defined(t.name)) {
-			double d = var::symbol_table.get_value(t.name);
+		if (var::symbol_table.is_defined(t.m_name)) {
+			double d = var::symbol_table.get_value(t.m_name);
 			return d;
 		}
-		error("Неизвестная переменная ", t.name);
+		error(t.m_name + " - неопределённая лексема или переменная");
 	case Tok_list::sr:
 		return square_root(ts);
-	case Tok_list::e:
-		return exponentiation(ts);
+	case Tok_list::p:
+		return power(ts);
 	default:
 		error("Ожидается корректный ввод");
 	}
@@ -389,7 +389,7 @@ double term(Token_stream& ts) {
 	Token t = ts.get();
 	while (true)
 	{
-		switch (t.kind)
+		switch (t.m_kind)
 		{
 		case '(':			//for (1+3)(2+4) or 5(2+3) notation (the same as Term * Primary)
 			ts.putback(t);
@@ -402,26 +402,26 @@ double term(Token_stream& ts) {
 			break;
 		case '/':
 		{
-			double d = primary(ts);
-			if (d == 0)
+			double right = primary(ts);
+			if (right == 0)
 			{
-				error("division by zero");
+				error("деление на 0");
 			}
-			left /= d;
+			left /= right;
 			t = ts.get();
 			break;
 		}
 		case '%':
 		{
-			double d = primary(ts);
-			if (d == 0)
-				error("division by zero");
-			left = fmod(left, d);
+			double right = primary(ts);
+			if (right == 0)
+				error("остаток от деления на 0");
+			left = fmod(left, right);
 			t = ts.get();
 			break;
 		}
 		case Tok_list::number:						//error handling
-			error("excess number");
+			error("Неожидаемый ввод числа");
 		default:
 			ts.putback(t);
 			return left;
@@ -435,7 +435,7 @@ double expression(Token_stream& ts)
 	Token t = ts.get();
 	while (true)
 	{
-		switch (t.kind) {
+		switch (t.m_kind) {
 		case '+':
 			left += term(ts);
 			t = ts.get();
@@ -444,10 +444,10 @@ double expression(Token_stream& ts)
 			left -= term(ts);
 			t = ts.get();
 			break;
-		case Tok_list::number:								//error handling
+		case Tok_list::number:									//error handling
 			error("Неожидаемый ввод числа");
 		case Tok_list::name:									//error handling
-			error(t.name, " - неопределённая лексема или переменная");
+			error(t.m_name + " - неопределённая лексема или переменная");
 		default:
 			ts.putback(t);
 			return left;
@@ -458,11 +458,11 @@ double expression(Token_stream& ts)
 double declaration(Token_stream& ts, bool is_const = false)
 {
 	Token t = ts.get();
-	if (t.kind != Tok_list::name) error("В объявлении ожидается имя переменной");
-	std::string var_name = t.name;
+	if (t.m_kind != Tok_list::name) error("В объявлении ожидается имя переменной");
+	std::string var_name = t.m_name;
 
 	Token t2 = ts.get();
-	if (t2.kind != '=') error("Пропущен символ '=' в объявлении ", var_name);
+	if (t2.m_kind != '=') error("Пропущен символ '=' в объявлении " + var_name);
 
 	double var_value = expression(ts);
 
@@ -475,7 +475,7 @@ double declaration(Token_stream& ts, bool is_const = false)
 double constant_declaration(Token_stream& ts)
 {
 	Token t = ts.get();
-	if (t.kind != Tok_list::decl) error("Пропущен спецификатор в объявлении константной переменной");
+	if (t.m_kind != Tok_list::decl) error("Пропущен спецификатор в объявлении константной переменной");
 
 	bool is_constant = true;
 	return declaration(ts, is_constant);
@@ -484,11 +484,11 @@ double constant_declaration(Token_stream& ts)
 double assignment(Token_stream& ts)
 {
 	Token t = ts.get();
-	if (t.kind != Tok_list::name) error("В присваивании ожидается имя переменной");
-	std::string var_name = t.name;
+	if (t.m_kind != Tok_list::name) error("В присваивании ожидается имя переменной");
+	std::string var_name = t.m_name;
 
 	Token t2 = ts.get();
-	if (t2.kind != '=') error("Пропущен символ '=' в присваивании ", var_name);
+	if (t2.m_kind != '=') error("Пропущен символ '=' в присваивании " + var_name);
 
 	double d = expression(ts);
 	var::symbol_table.set_value(var_name, d);
@@ -498,9 +498,9 @@ double assignment(Token_stream& ts)
 double deletion(Token_stream& ts)
 {
 	Token t = ts.get();
-	if (t.kind != Tok_list::name) error("В опрерации удаления ожидается имя переменной");
+	if (t.m_kind != Tok_list::name) error("В опрерации удаления ожидается имя переменной");
 
-	double d = var::symbol_table.delete_var(t.name);
+	double d = var::symbol_table.delete_var(t.m_name);
 	return d;
 }
 
@@ -509,7 +509,7 @@ double statement(Token_stream& ts)
 {
 	Token t = ts.get();
 
-	switch (t.kind) {
+	switch (t.m_kind) {
 
 	case Tok_list::decl:
 		return declaration(ts);
@@ -533,11 +533,12 @@ void help_message()
 {
 	std::cout << std::endl << "СПРАВКА:" << std::endl
 		<< "Вводите инструкции, чтобы программа их выполнила. (для подтеверждения введите символ " << Tok_list::print << ")" << std::endl
-		<< "Допустимые операторы: '+', '-', '*', '/', sr( ) - квадратный корень, exp( , ) - возведение в степень." << std::endl << std::endl
+		<< "Допустимые операторы: '+', '-', '*', '/', sr( ) - квадратный корень, pow( , ) - возведение в степень." << std::endl << std::endl
 		<< "Также возможна работа с переменными:" << std::endl
 		<< "---------------------------------------------" << std::endl
 		<< "# 'Имя' = 'выражение' <- Объявление (префикс const для константных переменных)" << std::endl
-		<< "let 'Имя' = 'выражение' <- Присваивание" << std::endl << std::endl
+		<< "let 'Имя' = 'выражение' <- Присваивание" << std::endl
+		<< "delete 'Имя' <- Удаление переменной" << std::endl << std::endl
 		<< "Имена переменных должны начинаться с буквы и могут содержать буквы, цифры и знаки подчёркивания" << std::endl
 		<< "---------------------------------------------" << std::endl << std::endl
 		<< "Чтобы выйти из программы, введите " << Tok_list::quitkey << std::endl << std::endl;
@@ -556,10 +557,10 @@ void calculate(Token_stream& ts)
 		try {
 			std::cout << Tok_list::prompt;
 			Token t = ts.get();
-			while (t.kind == Tok_list::print || t.kind == Tok_list::quit || t.kind == Tok_list::help) {
-				if (t.kind == Tok_list::quit)
+			while (t.m_kind == Tok_list::print || t.m_kind == Tok_list::quit || t.m_kind == Tok_list::help) {
+				if (t.m_kind == Tok_list::quit)
 					return;
-				if (t.kind == Tok_list::help) {
+				if (t.m_kind == Tok_list::help) {
 					help_message();
 				}
 				t = ts.get();
@@ -584,6 +585,7 @@ int main()
 	try {
 		bool is_const = true;
 		var::symbol_table.define_var(Variable{ "pi", 3.1415, is_const });
+		var::symbol_table.define_var(Variable{ "e", 2.71828, is_const });
 	}
 	catch (std::exception& e) {
 		std::cerr << "ERROR : " << e.what() << std::endl;
